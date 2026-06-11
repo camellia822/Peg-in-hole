@@ -1,0 +1,465 @@
+<!--
+
+MODEL: Universal Robots UR5e + Robotiq 2F-85
+AUTHOR: Yi Liu @AiRO 
+UNIVERSITY: UGent-imec
+DEPARTMENT: Faculty of Engineering and Architecture
+Control Engineering / Automation Engineering
+
+-->
+
+<mujoco model="ur5gripper">
+
+    <option timestep="2e-3"
+            iterations="10"
+            tolerance="1e-5"
+            impratio="20"
+            gravity="0 0 -9.81"/>
+    
+    <compiler angle="radian" 
+              inertiafromgeom="true"
+              texturedir="textures/"
+              meshdir="meshs/visual/"/>
+    <size njmax="10000" nconmax="1500" nstack="3000000"/>
+
+
+    <default>
+        <site rgba="0.8 0.6 0.7 0.3" type="ellipsoid" group="3"/>
+        <geom contype='1' conaffinity='1' condim='6'  margin="1e-3" solref=".01 1" solimp=".99 .99 .01" />
+        <joint armature="0.01" damping=".1"/>
+        <default class="UR5">
+            <joint damping='65'/>
+        </default>
+        <default class="UR5e">
+            <joint damping='45'/>
+        </default>
+        <default class="GRIPPER">
+            <joint damping='5'/>
+        </default>
+        <camera mode="fixed" pos="10 -2 2.7" axisangle="5 8 0 0.9"/>
+    </default>
+
+    <visual>
+        <map fogstart="3" fogend="5" znear="0.05"/>
+        <quality shadowsize="2048"/> 
+        <scale framelength="0.1"
+               framewidth="0.005"
+               contactwidth="0.1"
+               contactheight="0.005"
+               forcewidth="0.01"
+               />
+	<global  fovy="45"  />
+    </visual>
+
+    <asset>
+        <mesh name="base_0" file="base_0.obj"/>
+        <mesh name="base_1" file="base_1.obj"/>
+        <mesh name="shoulder_0" file="shoulder_0.obj"/>
+        <mesh name="shoulder_1" file="shoulder_1.obj"/>
+        <mesh name="shoulder_2" file="shoulder_2.obj"/>
+        <mesh name="upperarm_0" file="upperarm_0.obj"/>
+        <mesh name="upperarm_1" file="upperarm_1.obj"/>
+        <mesh name="upperarm_2" file="upperarm_2.obj"/>
+        <mesh name="upperarm_3" file="upperarm_3.obj"/>
+        <mesh name="forearm_0" file="forearm_0.obj"/>
+        <mesh name="forearm_1" file="forearm_1.obj"/>
+        <mesh name="forearm_2" file="forearm_2.obj"/>
+        <mesh name="forearm_3" file="forearm_3.obj"/>
+        <mesh name="wrist1_0" file="wrist1_0.obj"/>
+        <mesh name="wrist1_1" file="wrist1_1.obj"/>
+        <mesh name="wrist1_2" file="wrist1_2.obj"/>
+        <mesh name="wrist2_0" file="wrist2_0.obj"/>
+        <mesh name="wrist2_1" file="wrist2_1.obj"/>
+        <mesh name="wrist2_2" file="wrist2_2.obj"/>
+        <mesh name="wrist3" file="wrist3.obj"/>
+
+        <mesh name="gripperconnector" file="kinova_robotiq_coupler.stl" />
+        <mesh name="gripperpalm" file="robotiq_85_base_link.stl" />
+        <mesh name="link_0" file="robotiq_85_finger_link.stl" />
+        <mesh name="link_1" file="robotiq_85_finger_tip_link.stl" />
+        <mesh name="link_2" file="robotiq_85_inner_knuckle_link.stl" />
+        <mesh name="link_3" file="robotiq_85_knuckle_link.stl" />
+        <mesh name="finger" file="finger_tip_.stl" />
+        <mesh name="fingertip" file="fingertip_test.stl" />
+        <mesh name="box_hole" file="box_hole.stl" />
+
+        <mesh name="BOX"   file="BOX.stl"/>
+        <mesh file="AllFinal_hull_1.stl" name="1"  scale="1.2 1.2 0.8"/>
+        <mesh file="AllFinal_hull_2.stl" name="2" scale="1.2 1.2 0.8" />
+        <mesh file="AllFinal_hull_3.stl" name="3" scale="1.2 1.2 0.8" />
+        <mesh file="AllFinal_hull_4.stl" name="4" scale="1.2 1.2 0.8" />
+        <mesh file="AllFinal_hull_5.stl" name="5" scale="1.2 1.2 0.8 "/>
+        <mesh file="AllFinal_hull_6.stl" name="6" scale="1.2 1.2 0.8" />
+        <mesh file="AllFinal_hull_7.stl" name="7"  scale="1.2 1.2 0.8"/>
+        <mesh file="AllFinal_hull_8.stl" name="8"  scale="1.2 1.2 0.8"/>
+        <mesh file="AllFinal_hull_9.stl" name="9" scale="1.2 1.2 0.8" />
+        <mesh file="AllFinal_hull_10.stl" name="10"  scale="1.2 1.2 0.8"/>
+        <mesh file="AllFinal_hull_11.stl" name="11"  scale="1.2 1.2 0.8"/>
+        <mesh file="AllFinal_hull_12.stl" name="12"  scale="1.2 1.2 0.8" />
+
+        <!--Textures-->
+        <texture name="ur5_tex"     type="2d"       builtin="flat" height="32" width="32" rgb1="0.45 0.45 0.45" />
+        <texture name="gripper_tex" type="2d"       builtin="flat" height="32" width="32" rgb1="0.45 0.45 0.45" rgb2="0 0 0"/>
+        <texture name="bench_tex"   type="2d"       builtin="flat" height="32" width="32" rgb1="0.7 0.7 0.7" />
+        <texture name="sky_tex"     type="skybox"   builtin="gradient" width="100" height="100" rgb1="1 1 1" rgb2="0.3 0.3 0.8" />
+        <texture name="texgeom"     type="cube"     builtin="flat" mark="cross" width="127" height="1278" rgb1="0.8 0.6 0.4" rgb2="0.8 0.6 0.4" markrgb="1 1 1" random="0.01" />
+        <texture name="floor_tex"   type="2d"        builtin="checker" rgb1=".2 .3 .4" rgb2=".1 .2 .3" width="100" height="100" />
+        <texture name="wood"        type="cube"     file="wood2.png"/>
+        <texture name="metal1"      type="cube"     file="metal2.png"/>
+        <!--Materials-->
+        <material name="ur5_mat"        texture="ur5_tex"   shininess="0.9" specular="0.75" reflectance="0.3"/>
+        <material name="gripper_mat"    texture="gripper_tex"   shininess="0.9" specular="0.75" reflectance="0.4"/>
+        <material name='floor_mat'      texture="floor_tex"  shininess="0.8" texrepeat="10 10" specular="0.7"  reflectance="0.5" />
+        <material name='geom'           texture="texgeom"   texuniform="true" />
+        <material name="bench_mat"      texture="metal1"   shininess="0.1" specular="0.5" reflectance="0.2"/>
+        <material name="tablecube"      texture="wood" rgba=".8 .8 .8 1"/>
+   	    <material name="metal_box" reflectance="0.5" texrepeat="1 1" texture="metal1" texuniform="true"/>
+        
+        <material name="GriMat" specular="0.9" shininess="0.5" reflectance="0" rgba="0.1 0.1 0.1 1" emission="0.1" />
+        <material name="FingerMat" specular="0.9" shininess="0.5" reflectance="0" rgba="0.5 0.5 0.1 1" emission="0.1" />
+        <material name="BasketMat" specular="0" shininess="0" reflectance="0" rgba="0.26 0.16 0.16796875 1" emission="0" />
+        <material name="Light" specular="0" shininess="0.6" reflectance="0.9" rgba="0.5 0.5 1 1" emission="0.7" />
+
+    
+        <!--UR5e Materials-->
+        <material name="ur5e_black" specular="0.5" shininess="0.25" rgba="0.033 0.033 0.033 1"/>
+        <material name="ur5e_jointgray" specular="0.5" shininess="0.25" rgba="0.278 0.278 0.278 1"/>
+        <material name="ur5e_linkgray" specular="0.5" shininess="0.25" rgba="0.82 0.82 0.82 1"/>
+        <material name="ur5e_blue" specular="0.5" shininess="0.25" rgba="0.49 0.678 0.8 1"/>
+    </asset>
+
+    <contact>
+        <exclude body1="OUR_TABLE" body2="base_link"/>
+        <exclude body1="base_link" body2="shoulder_link"/>
+        <exclude body1="shoulder_link" body2="upper_arm_link"/>
+        <exclude body1="upper_arm_link" body2="forearm_link"/>
+        <exclude body1="forearm_link" body2="wrist_1_link"/>
+        <exclude body1="wrist_1_link" body2="wrist_2_link"/>
+        <exclude body1="wrist_2_link" body2="wrist_3_link"/>
+        <exclude body1="ee_link" body2="wrist_3_link"/>
+    </contact>
+
+    <worldbody>
+            <!--Lighting parameters-->
+        <light name="light3" mode="targetbody" target="OUR_TABLE" directional="true" pos="1 -1 3" />
+        <!--Camera parameters-->
+        <camera name="main1" mode="trackcom" target="OUR_TABLE" pos="0 1.2 2" axisangle="0 0.5 1 3.1415927"/>
+        <!--Floor Property-->
+        <geom name='floor' material="floor_mat" pos='0 0 0' size='2.5 2.5 0.1'  type='plane' />
+	
+        
+        <!-- <body name="OBJ_TABLE" pos="0 0.5 0.435">
+            <geom size=".6 .3 .03" pos ="0 0 0.4" type="box" material="bench_mat"/>
+            <geom size=".6 .3 .03" pos ="0 0 -0.2" type="box" material="bench_mat"/>
+            <geom size=".04 .04 .435" pos =".57 .27 0" type="box" material="bench_mat"/>
+            <geom size=".04 .04 .435" pos ="-.57 .27 0" type="box" material="bench_mat"/>
+            <geom size=".04 .04 .435" pos =".57 -.27 0" type="box" material="bench_mat"/>
+            <geom size=".04 .04 .435" pos ="-.57 -.27 0" type="box" material="bench_mat"/>
+            <inertial pos="0 0 0" mass="1000" diaginertia="0 0 0" />
+        </body> -->
+       
+        <!-- <body name="box" pos="0 0.35 0.915">
+        	<geom name="box_hole" pos="0 0 0" mesh="box_hole" type="mesh" solimp="0.998 0.998 0.001" solref="0.001 1" density="6700" rgba="0 1 0 1"  />
+        </body> -->
+        <!-- <body mocap="true" name="box" pos="0 0.35 0.935">
+            <body name="object">
+                <geom pos="-0.11 0 0" size="0.06 0.17 0.02" type="box" group="0" material="bench_mat" />
+                <geom pos="0.11 0 0" size="0.06 0.17 0.02" type="box" group="0" material="bench_mat" />
+                <geom pos="0 0.11 0" size="0.05 0.06 0.02" type="box" group="0" material="bench_mat" />
+                <geom pos="0 -0.11 0" size="0.05 0.06 0.02" type="box" group="0" material="bench_mat" />
+            </body>
+        </body> -->
+
+        <!-- -0.38 0.3 0.885 --> 
+        <!-- 0.38 0.38 0.955 -->
+        <!-- limit -->
+    
+        <!-- -0.15 0.34 .885 -->
+
+        <!-- side length err (6-4) cm -->
+        <!-- <body mocap="true" name="box" pos="0 0.34 0.94"> 
+            <body name="object">
+                <geom pos="-0.10 0 0" size="0.07 0.1725 0.02" type="box" group="0" rgba="0 1 0 1" />
+                <geom pos="0.10 0 0" size="0.07 0.1725 0.02" type="box" group="0"  rgba="0 1 0 1"/>
+                <geom pos="0 0.10 0" size="0.03 0.07 0.02" type="box" group="0"  rgba="0 1 0 1"/>
+                <geom pos="0 -0.10 0" size="0.03 0.07 0.02" type="box" group="0"  rgba="0 1 0 1"/>
+                <site name="box_surface" pos="0 0 0.02" size="0.001 0.001 0.001" type="sphere" rgba="0.3 0.2 0.1 1"/>
+            </body>
+        </body> -->
+
+
+        <!-- dual cylindrical-hole fixture for twin-peg insertion -->
+        <body mocap="true" name="box" pos="0 0.34 0.94"> 
+            <body name="object">
+                <!-- Peg radius = 20mm; single-side radial clearance = 1mm; hole radius = 21mm. -->
+                <!-- Circular hole walls are approximated with 16 tangent box segments per hole. -->
+                <geom name="plate_left_outer" pos="-0.1405 0 0" size="0.0595 0.18 0.02" type="box" group="0" rgba="0 1 0 1"/>
+                <geom name="plate_right_outer" pos="0.1405 0 0" size="0.0595 0.18 0.02" type="box" group="0" rgba="0 1 0 1"/>
+                <geom name="plate_center_bridge" pos="0 0 0" size="0.0390 0.18 0.02" type="box" group="0" rgba="0 1 0 1"/>
+
+                <geom name="left_hole_wall_00" pos="-0.036000 0.000000 0" size="0.0049 0.0030 0.02" type="box" euler="0 0 1.570796" group="0" margin="2e-4" rgba="0 1 0 1"/>
+                <geom name="left_hole_wall_01" pos="-0.037827 0.009184 0" size="0.0049 0.0030 0.02" type="box" euler="0 0 1.963495" group="0" margin="2e-4" rgba="0 1 0 1"/>
+                <geom name="left_hole_wall_02" pos="-0.043029 0.016971 0" size="0.0049 0.0030 0.02" type="box" euler="0 0 2.356194" group="0" margin="2e-4" rgba="0 1 0 1"/>
+                <geom name="left_hole_wall_03" pos="-0.050816 0.022173 0" size="0.0049 0.0030 0.02" type="box" euler="0 0 2.748894" group="0" margin="2e-4" rgba="0 1 0 1"/>
+                <geom name="left_hole_wall_04" pos="-0.060000 0.024000 0" size="0.0049 0.0030 0.02" type="box" euler="0 0 3.141593" group="0" margin="2e-4" rgba="0 1 0 1"/>
+                <geom name="left_hole_wall_05" pos="-0.069184 0.022173 0" size="0.0049 0.0030 0.02" type="box" euler="0 0 3.534292" group="0" margin="2e-4" rgba="0 1 0 1"/>
+                <geom name="left_hole_wall_06" pos="-0.076971 0.016971 0" size="0.0049 0.0030 0.02" type="box" euler="0 0 3.926991" group="0" margin="2e-4" rgba="0 1 0 1"/>
+                <geom name="left_hole_wall_07" pos="-0.082173 0.009184 0" size="0.0049 0.0030 0.02" type="box" euler="0 0 4.319690" group="0" margin="2e-4" rgba="0 1 0 1"/>
+                <geom name="left_hole_wall_08" pos="-0.084000 0.000000 0" size="0.0049 0.0030 0.02" type="box" euler="0 0 4.712389" group="0" margin="2e-4" rgba="0 1 0 1"/>
+                <geom name="left_hole_wall_09" pos="-0.082173 -0.009184 0" size="0.0049 0.0030 0.02" type="box" euler="0 0 5.105088" group="0" margin="2e-4" rgba="0 1 0 1"/>
+                <geom name="left_hole_wall_10" pos="-0.076971 -0.016971 0" size="0.0049 0.0030 0.02" type="box" euler="0 0 5.497787" group="0" margin="2e-4" rgba="0 1 0 1"/>
+                <geom name="left_hole_wall_11" pos="-0.069184 -0.022173 0" size="0.0049 0.0030 0.02" type="box" euler="0 0 5.890486" group="0" margin="2e-4" rgba="0 1 0 1"/>
+                <geom name="left_hole_wall_12" pos="-0.060000 -0.024000 0" size="0.0049 0.0030 0.02" type="box" euler="0 0 0.000000" group="0" margin="2e-4" rgba="0 1 0 1"/>
+                <geom name="left_hole_wall_13" pos="-0.050816 -0.022173 0" size="0.0049 0.0030 0.02" type="box" euler="0 0 0.392699" group="0" margin="2e-4" rgba="0 1 0 1"/>
+                <geom name="left_hole_wall_14" pos="-0.043029 -0.016971 0" size="0.0049 0.0030 0.02" type="box" euler="0 0 0.785398" group="0" margin="2e-4" rgba="0 1 0 1"/>
+                <geom name="left_hole_wall_15" pos="-0.037827 -0.009184 0" size="0.0049 0.0030 0.02" type="box" euler="0 0 1.178097" group="0" margin="2e-4" rgba="0 1 0 1"/>
+
+                <geom name="right_hole_wall_00" pos="0.084000 0.000000 0" size="0.0049 0.0030 0.02" type="box" euler="0 0 1.570796" group="0" margin="2e-4" rgba="0 1 0 1"/>
+                <geom name="right_hole_wall_01" pos="0.082173 0.009184 0" size="0.0049 0.0030 0.02" type="box" euler="0 0 1.963495" group="0" margin="2e-4" rgba="0 1 0 1"/>
+                <geom name="right_hole_wall_02" pos="0.076971 0.016971 0" size="0.0049 0.0030 0.02" type="box" euler="0 0 2.356194" group="0" margin="2e-4" rgba="0 1 0 1"/>
+                <geom name="right_hole_wall_03" pos="0.069184 0.022173 0" size="0.0049 0.0030 0.02" type="box" euler="0 0 2.748894" group="0" margin="2e-4" rgba="0 1 0 1"/>
+                <geom name="right_hole_wall_04" pos="0.060000 0.024000 0" size="0.0049 0.0030 0.02" type="box" euler="0 0 3.141593" group="0" margin="2e-4" rgba="0 1 0 1"/>
+                <geom name="right_hole_wall_05" pos="0.050816 0.022173 0" size="0.0049 0.0030 0.02" type="box" euler="0 0 3.534292" group="0" margin="2e-4" rgba="0 1 0 1"/>
+                <geom name="right_hole_wall_06" pos="0.043029 0.016971 0" size="0.0049 0.0030 0.02" type="box" euler="0 0 3.926991" group="0" margin="2e-4" rgba="0 1 0 1"/>
+                <geom name="right_hole_wall_07" pos="0.037827 0.009184 0" size="0.0049 0.0030 0.02" type="box" euler="0 0 4.319690" group="0" margin="2e-4" rgba="0 1 0 1"/>
+                <geom name="right_hole_wall_08" pos="0.036000 0.000000 0" size="0.0049 0.0030 0.02" type="box" euler="0 0 4.712389" group="0" margin="2e-4" rgba="0 1 0 1"/>
+                <geom name="right_hole_wall_09" pos="0.037827 -0.009184 0" size="0.0049 0.0030 0.02" type="box" euler="0 0 5.105088" group="0" margin="2e-4" rgba="0 1 0 1"/>
+                <geom name="right_hole_wall_10" pos="0.043029 -0.016971 0" size="0.0049 0.0030 0.02" type="box" euler="0 0 5.497787" group="0" margin="2e-4" rgba="0 1 0 1"/>
+                <geom name="right_hole_wall_11" pos="0.050816 -0.022173 0" size="0.0049 0.0030 0.02" type="box" euler="0 0 5.890486" group="0" margin="2e-4" rgba="0 1 0 1"/>
+                <geom name="right_hole_wall_12" pos="0.060000 -0.024000 0" size="0.0049 0.0030 0.02" type="box" euler="0 0 0.000000" group="0" margin="2e-4" rgba="0 1 0 1"/>
+                <geom name="right_hole_wall_13" pos="0.069184 -0.022173 0" size="0.0049 0.0030 0.02" type="box" euler="0 0 0.392699" group="0" margin="2e-4" rgba="0 1 0 1"/>
+                <geom name="right_hole_wall_14" pos="0.076971 -0.016971 0" size="0.0049 0.0030 0.02" type="box" euler="0 0 0.785398" group="0" margin="2e-4" rgba="0 1 0 1"/>
+                <geom name="right_hole_wall_15" pos="0.082173 -0.009184 0" size="0.0049 0.0030 0.02" type="box" euler="0 0 1.178097" group="0" margin="2e-4" rgba="0 1 0 1"/>
+                <site name="box_surface" pos="0 0 0.02" size="0.001 0.001 0.001" type="sphere" rgba="0.3 0.2 0.1 1"/>
+            </body>
+        </body>
+
+        <!-- side length err (4.4-4) cm -->
+        <!-- <body mocap="true" name="box" pos="0 0.34 0.94">
+            <body name="object">
+                <geom pos="-0.10 0 0" size="0.078 0.178 0.02" type="box" group="0" rgba="0 1 0 1" />
+                <geom pos="0.10 0 0" size="0.078 0.178 0.02" type="box" group="0"  rgba="0 1 0 1"/>
+                <geom pos="0 0.10 0" size="0.022 0.078 0.02" type="box" group="0"  rgba="0 1 0 1"/>
+                <geom pos="0 -0.10 0" size="0.022 0.078 0.02" type="box" group="0"  rgba="0 1 0 1"/>
+                <site name="box_surface" pos="0 0 0.02" size="0.001 0.001 0.001" type="sphere" rgba="0.3 0.2 0.1 1"/>
+            </body>
+        </body> -->
+
+        
+<!-- -0.11235115  0.29859969  1.0047236 -->
+        <!-- <body mocap="true" name="target_ball" pos="0.05 0.38 0.985" quat="1 0 0 0">
+            <body name="ball">
+                <geom name="cylinder2" type="box" size=".005 .005 .004"  euler="0 0 0" rgba="0 0.5 0.5 1" material="gripper_mat" contype="0" conaffinity="1"/>
+            </body>
+        </body> -->
+
+        <!--Robot UR5e-->
+        <body name="OUR_TABLE" pos="0 0 0.435">
+            <!--<geom size=".3 .2 .435" type="box" material="bench_mat"/>-->
+            <geom size=".69 .19 .03" pos ="0 0 0.4" type="box" material="bench_mat"/>
+            <geom size=".69 .19 .03" pos ="0 0 -0.2" type="box" material="bench_mat"/>
+            <geom size=".04 .04 .435" pos =".66 .16 0" type="box" material="bench_mat"/>
+            <geom size=".04 .04 .435" pos ="-.66 .16 0" type="box" material="bench_mat"/>
+            <geom size=".04 .04 .435" pos =".66 -.16 0" type="box" material="bench_mat"/>
+            <geom size=".04 .04 .435" pos ="-.66 -.16 0" type="box" material="bench_mat"/>
+            <inertial pos="0 0 0" mass="1000" diaginertia="0 0 0" />
+        
+            <body name="base_link" pos="0 0 0.425">
+                <inertial pos="0 0 0" quat="0.5 0.5 -0.5 0.5" mass="4.0" diaginertia="0.00443333156 0.00443333156 0.0072" />
+                <geom type="mesh" mesh="base_0" material="ur5e_black"/>
+                <geom type="mesh" mesh="base_1" material="ur5e_jointgray"/>
+                <body name="shoulder_link" pos="0 0 0.163">
+                    <inertial pos="0 0 0" mass="3.7" diaginertia="0.0102675 0.0102675 0.00666" />
+                    <joint name="shoulder_pan_joint" class="UR5" pos="0 0 0" axis="0 0 1" limited="true" range="-3.14159 3.14159" />
+                    <geom type="mesh" mesh="shoulder_0" material="ur5e_blue"/>
+                    <geom type="mesh" mesh="shoulder_1" material="ur5e_black"/>
+                    <geom type="mesh" mesh="shoulder_2" material="ur5e_jointgray"/>
+                    <body name="upper_arm_link" pos="0 0.138 0" quat="0.707107 0 0.707107 0">
+                        <inertial pos="0 0 0.2125" mass="8.393" diaginertia="0.133886 0.133886 0.0151074" />
+                        <joint name="shoulder_lift_joint" class="UR5" pos="0 0 0" axis="0 1 0" limited="true" range="-3.14159 3.14159" />
+                        <geom type="mesh" mesh="upperarm_0" material="ur5e_linkgray"/>
+                        <geom type="mesh" mesh="upperarm_1" material="ur5e_black"/>
+                        <geom type="mesh" mesh="upperarm_2" material="ur5e_jointgray"/>
+                        <geom type="mesh" mesh="upperarm_3" material="ur5e_blue"/>
+                        <body name="forearm_link" pos="0 -0.131 0.425">
+                            <inertial pos="0 0 0.196" mass="2.275" diaginertia="0.0311796 0.0311796 0.004095" />
+                            <joint name="elbow_joint" class="UR5" pos="0 0 0" axis="0 1 0" limited="true" range="-3.14159 3.14159" />
+                            <geom type="mesh" mesh="forearm_0" material="ur5e_blue"/>
+                            <geom type="mesh" mesh="forearm_1" material="ur5e_linkgray"/>
+                            <geom type="mesh" mesh="forearm_2" material="ur5e_black"/>
+                            <geom type="mesh" mesh="forearm_3" material="ur5e_jointgray"/>
+                            <body name="wrist_1_link" pos="0 0 0.392" quat="0.707107 0 0.707107 0">
+                                <inertial pos="0 0 0" quat="0.5 0.5 -0.5 0.5" mass="1.219" diaginertia="0.0025599 0.0025599 0.0021942" />
+                                <joint name="wrist_1_joint" class="UR5e" pos="0 0 0" axis="0 1 0" limited="true" range="-6.28319 6.28319" />
+                                <geom type="mesh" mesh="wrist1_0" material="ur5e_black"/>
+                                <geom type="mesh" mesh="wrist1_1" material="ur5e_blue"/>
+                                <geom type="mesh" mesh="wrist1_2" material="ur5e_jointgray"/>
+                                <body name="wrist_2_link" pos="0 0.127 0">
+                                    <inertial pos="0 0 0" quat="0.5 0.5 -0.5 0.5" mass="1.219" diaginertia="0.0025599 0.0025599 0.0021942" />
+                                    <joint name="wrist_2_joint" class="UR5e" pos="0 0 0" axis="0 0 1" limited="true" range="-6.28319 6.28319" />
+                                    <geom type="mesh" mesh="wrist2_0" material="ur5e_black"/>
+                                    <geom type="mesh" mesh="wrist2_1" material="ur5e_blue"/>
+                                    <geom type="mesh" mesh="wrist2_2" material="ur5e_jointgray"/>
+                                    <body name="wrist_3_link" pos="0 0 0.1">
+                                        <inertial pos="0 0 0" quat="0.5 0.5 -0.5 0.5" mass="0.1889" diaginertia="0.000132134 9.90863e-05 9.90863e-05" />
+                                        <joint name="wrist_3_joint" class="UR5e" pos="0 0 0" axis="0 1 0" limited="true" range="-6.28319 6.28319" />
+                                        <geom name="wrist_3_link" type="mesh" mesh="wrist3" material="ur5e_linkgray"/>
+                                        <!--GRIPPER-->
+                                        <body name="ee_link" pos="0 0.1 0" quat="0.707107 -0.707107 0 0">
+                                            <inertial pos="-0.01 0 0" mass="0.001" diaginertia="1.66667e-08 1.66667e-08 1.66667e-08" />
+                                            <geom size="0.005 0.005 0.005" pos="-0.01 0 0" type="box" />
+                                            <geom name="light_1" type="sphere" size="0.005" pos="0.035 0 0.0166" material="Light" />
+                                            <geom name="light_2" type="sphere" size="0.005" pos="-0.035 0 0.0166" material="Light" />
+                                            <geom name="gripperconnector" type="mesh" mesh="gripperconnector" pos="0 0 0.0466" material="GriMat" />
+                                            <geom name="gripperpalm" type="mesh" mesh="gripperpalm" pos="0 0 0.0016" quat="0.707107 0 -0.707107 0" material="GriMat" />
+                                            <site name="ee_site" pos="0 0.06 0" size="0.005 0.005 0.005" type="sphere" rgba="0.3 0.2 0.1 1"/>
+                                            <body name="right_driver" pos="0 -0.0306011 0.054904" quat="0.707107 0 -0.707107 0">
+                                                <geom name="right_driver_mesh" type="mesh" mesh="link_3" material="GriMat" contype="0" conaffinity="0" />
+                                                <joint name="right_driver_1" damping="1"  axis="0 0 1" type="hinge" limited="true" range="-0.1 0.8" />
+                                                <body name="right_coupler" pos="0 -0.0315 0">
+                                                    <geom name="right_coupler_mesh" type="mesh" mesh="link_0" material="GriMat" contype="0" conaffinity="0" />
+                                                    <joint name="right_driver_2" damping="1" axis="0 0 1" type="hinge" limited="true" range="-0.01 0.8" />
+                                                    <body name="right_follower_link" pos="0.0475 -0.006 0">
+                                                        <geom name="right_follower_mesh" pos="0.0025 0.021 0" type="mesh" mesh="link_1" material="GriMat" />
+                                                        <joint name="right_driver_3" damping="1"  axis="0 0 1" type="hinge" limited="true" range="-0.8 0.01" />
+                                                        <site name="right_touch_sensor1" pos="0.006 0.015 0.026" size="0.004 0.006 0.001" type="box" rgba="0.9 0.1 0.1 0.3"/>
+                                                        <site name="right_touch_sensor2" pos="0.006 0.038 0.026" size="0.004 0.006 0.001" type="box" rgba="0.9 0.1 0.1 0.3"/>
+                                                        <site name="right_touch_sensor3" pos="0.019 0.038 0.026" size="0.004 0.006 0.001" type="box" rgba="0.9 0.1 0.1 0.3"/>
+                                                        <site name="right_touch_sensor4" pos="0.019 0.015 0.026" size="0.004 0.006 0.001" type="box" rgba="0.9 0.1 0.1 0.3"/>
+                                                        <site name="right_touch_sensor5" pos="0.012 0.055 0.006" size="0.004 0.004 0.001" type="box" rgba="0.9 0.1 0.1 0.3"/>
+                                                        <site name="right_touch_sensor6" pos="0.024 0.055 0.006" size="0.004 0.004 0.001" type="box" rgba="0.9 0.1 0.1 0.3"/>
+                                                    </body>
+                                                </body>
+                                            </body>
+                                            <body name="right_spring_link" pos="0.0016 -0.012 0.0614" quat="0.707107 0 -0.707107 0">
+                                                <geom name="right_spring_mesh" type="mesh" pos="0 -0.0005 0.0016" mesh="link_2" material="GriMat" contype="0" conaffinity="0" />
+                                                <joint name="right_driver_4" damping="0.1" axis="0 0 1" type="hinge" limited="true" range="-0.01 0.8" />
+                                            </body>
+                                            <body name="left_driver" pos="0 0.0306011 0.054904" quat="0 0.707107 0 0.707107">
+                                                <geom name="left_driver_mesh" type="mesh" mesh="link_3" material="GriMat" contype="0" conaffinity="0" />
+                                                <joint name="left_driver_1" damping="1"  axis="0 0 1" type="hinge" limited="true" range="-0.1 0.8" />
+                                                <body name="left_coupler" pos="0 -0.0315 0">
+                                                    <geom name="left_coupler_mesh" type="mesh" mesh="link_0" material="GriMat" contype="0" conaffinity="0" />
+                                                    <joint name="left_driver_2" damping="1"  axis="0 0 1" type="hinge" limited="true" range="-0.01 0.01" />
+                                                    <body name="left_follower_link" pos="0.0475 -0.006 0">
+                                                        <geom name="left_follower_mesh" pos="0.0025 0.021 0" type="mesh" mesh="link_1" material="GriMat" />
+                                                        <joint name="left_driver_3" damping="1"  axis="0 0 1" type="hinge" limited="true" range="-0.8 0.01" />
+                                                        <site name="left_touch_sensor1" pos="0.006 0.015 0.026" size="0.004 0.006 0.001" type="box" rgba="0.1 0.9 0.1 0.3"/>
+                                                        <site name="left_touch_sensor2" pos="0.006 0.038 0.026" size="0.004 0.006 0.001" type="box" rgba="0.1 0.9 0.1 0.3"/>
+                                                        <site name="left_touch_sensor3" pos="0.019 0.038 0.026" size="0.004 0.006 0.001" type="box" rgba="0.1 0.9 0.1 0.3"/>
+                                                        <site name="left_touch_sensor4" pos="0.019 0.015 0.026" size="0.004 0.006 0.001" type="box" rgba="0.1 0.9 0.1 0.3"/>
+                                                        <site name="left_touch_sensor5" pos="0.012 0.055 0.006" size="0.004 0.004 0.001" type="box" rgba="0.1 0.9 0.1 0.3"/>
+                                                        <site name="left_touch_sensor6" pos="0.024 0.055 0.006" size="0.004 0.004 0.001" type="box" rgba="0.1 0.9 0.1 0.3"/>
+                                                    </body>
+                                                </body>
+                                            </body>
+                                            <body name="left_spring_link" pos="0.0016 0.012 0.0614" quat="0 0.707107 0 0.707107">
+                                                <geom name="left_spring_mesh" type="mesh" pos="0 0.0005 0.0016" mesh="link_2" material="GriMat" contype="0" conaffinity="0" />
+                                                <joint name="left_driver_4" damping="0.1" axis="0 0 1" type="hinge" limited="true" range="-0.01 0.8" />
+                                            </body>
+                                            <body name="eef" pos="0 0 0.18">
+                                                <!-- <geom type="mesh" mesh="fingertip" rgba="0 0.9 0 1" /> -->
+                                                <site name="ee_tool" pos="0 0 0" size="1 1 1" type="box" rgba="0.3 0.2 0.1 1"/>
+                                            </body>
+                                            <body name="cylinder_obj" pos="0 0 0.18">
+                                                <!-- <joint type="slide" pos="0 0 0" stiffness="500" axis="0 0 1" damping="20" limited="true" range="-0.0001 0"/> -->
+                                                <joint name="peg_tilt_joint" pos="0 0 0" stiffness="200" axis="0 -1 0" damping="10" limited="true" range="-0.7 0.7"/>
+                                                <geom name="cylinder_bridge" pos="0 0 -0.045" friction="0.5" type="box" size=".08 .02 .01" euler="0 0 0" rgba="0 0.5 0.5 1" material="gripper_mat" contype="1" conaffinity="0"/>
+                                                <geom name="cylinder_left" pos="-0.06 0 0" friction="0.5" type="cylinder" size=".02 .06" margin="2e-4" euler="0 0 0" rgba="0 0.5 0.5 1" material="gripper_mat" contype="1" conaffinity="0"/>
+                                                <geom name="cylinder_right" pos="0.06 0 0" friction="0.5" type="cylinder" size=".02 .06" margin="2e-4" euler="0 0 0" rgba="0 0.5 0.5 1" material="gripper_mat" contype="1" conaffinity="0"/>
+                                                <site name="peg_touch_r1" pos="0.060 0.015 0.055" size="0.015 0.015 0.010" type="box" rgba="0.9 0.1 0.1 0.3"/>
+                                                <site name="peg_touch_r2" pos="0.060 -0.015 0.055" size="0.015 0.015 0.010" type="box" rgba="0.9 0.1 0.1 0.3"/>
+                                                <site name="peg_touch_r3" pos="0.074 0.000 0.055" size="0.015 0.015 0.010" type="box" rgba="0.9 0.1 0.1 0.3"/>
+                                                <site name="peg_touch_r4" pos="0.046 0.000 0.055" size="0.015 0.015 0.010" type="box" rgba="0.9 0.1 0.1 0.3"/>
+                                                <site name="peg_touch_r5" pos="0.067 0.010 0.060" size="0.015 0.015 0.010" type="box" rgba="0.9 0.1 0.1 0.3"/>
+                                                <site name="peg_touch_r6" pos="0.053 -0.010 0.060" size="0.015 0.015 0.010" type="box" rgba="0.9 0.1 0.1 0.3"/>
+                                                <site name="peg_touch_l1" pos="-0.060 0.015 0.055" size="0.015 0.015 0.010" type="box" rgba="0.1 0.9 0.1 0.3"/>
+                                                <site name="peg_touch_l2" pos="-0.060 -0.015 0.055" size="0.015 0.015 0.010" type="box" rgba="0.1 0.9 0.1 0.3"/>
+                                                <site name="peg_touch_l3" pos="-0.046 0.000 0.055" size="0.015 0.015 0.010" type="box" rgba="0.1 0.9 0.1 0.3"/>
+                                                <site name="peg_touch_l4" pos="-0.074 0.000 0.055" size="0.015 0.015 0.010" type="box" rgba="0.1 0.9 0.1 0.3"/>
+                                                <site name="peg_touch_l5" pos="-0.053 0.010 0.060" size="0.015 0.015 0.010" type="box" rgba="0.1 0.9 0.1 0.3"/>
+                                                <site name="peg_touch_l6" pos="-0.067 -0.010 0.060" size="0.015 0.015 0.010" type="box" rgba="0.1 0.9 0.1 0.3"/>
+                                                <site name="obj_bottom" pos="0 0 0.06" size="0.001 0.001 0.001" type="sphere" rgba="0.3 0.2 0.1 1"/>
+                                                <site name="obj_bottom_left" pos="-0.06 0 0.06" size="0.001 0.001 0.001" type="sphere" rgba="0.3 0.2 0.1 1"/>
+                                                <site name="obj_bottom_right" pos="0.06 0 0.06" size="0.001 0.001 0.001" type="sphere" rgba="0.3 0.2 0.1 1"/>
+                                            </body>
+                                        </body>
+                                    </body>
+                                </body>
+                            </body>
+                        </body>
+                    </body>
+                </body>
+                <body name="base" pos="0 0 0" quat="0 0 0 -1">
+                    <inertial pos="0 0 0" quat="1.7949e-09 0 0 -1" mass="0" diaginertia="0 0 0" />
+                </body>
+            </body>
+        </body>	
+        
+        
+
+    </worldbody>
+
+    <equality>
+        <connect body1="right_follower_link" body2="right_coupler" anchor="0 0 0" solref="0.01 0.5" active="true"/>
+        <connect body1="right_follower_link" body2="right_spring_link" anchor="0.0054 0.0192 0" solref="0.01 0.5" active="true"/>
+		<connect body1="right_driver" body2="right_coupler" anchor="0 0 0" solref="0.01 0.5" active="true"/>
+
+        <connect body1="left_follower_link" body2="left_coupler" anchor="0 0 0" solref="0.01 0.5" active="true"/>
+        <connect body1="left_follower_link" body2="left_spring_link" anchor="0.0054 0.0192 0" solref="0.01 0.5" active="true"/>
+        <connect body1="left_driver" body2="left_coupler" anchor="0 0 0" solref="0.01 0.5" active="true"/>
+
+        <joint name="symmetry:control" joint1="right_driver_1" joint2="left_driver_1" polycoef="0 1 0 0 0"/>
+	</equality>
+
+    <actuator>
+        <position name='shoulder_pan' ctrllimited="true" ctrlrange="-3.14159 3.14159" joint='shoulder_pan_joint' kp="3000"/>
+        <position name='shoulder_lift' ctrllimited="true" ctrlrange="-3.14159 3.14159" joint='shoulder_lift_joint' kp="3000"/>
+        <position name='forearm' ctrllimited="true" ctrlrange="-3.14159 3.14159" joint='elbow_joint' kp="3000"/>
+        <position name='wrist_1' ctrllimited="true" ctrlrange="-3.14159 3.14159" joint='wrist_1_joint' kp="3000"/>
+        <position name='wrist_2' ctrllimited="true" ctrlrange="-3.14159 3.14159" joint='wrist_2_joint' kp="3000"/>
+        <position name='wrist_3' ctrllimited="true" ctrlrange="-3.14159 3.14159" joint='wrist_3_joint' kp="3000"/>
+
+        <!-- <motor name='shoulder_pan_T' ctrllimited="true" ctrlrange="-2 2" joint='shoulder_pan_joint' gear="101"/> 
+        <motor name='shoulder_lift_T' ctrllimited="true" ctrlrange="-2 2" joint='shoulder_lift_joint' gear="101"/>
+        <motor name='forearm_T' ctrllimited="true" ctrlrange="-2 2" joint='elbow_joint' gear="101" />
+        <motor name='wrist_1_T' ctrllimited="true" ctrlrange="-1 1" joint='wrist_1_joint' gear="101"/> 
+        <motor name='wrist_2_T' ctrllimited="true" ctrlrange="-1 1" joint='wrist_2_joint' gear="101"/>
+        <motor name='wrist_3_T' ctrllimited="true" ctrlrange="-1 1" joint='wrist_3_joint' gear="101"/> -->
+
+        <!--<velocity name='shoulder_pan_v' class="UR5" joint='shoulder_pan_joint' kv="10"/>
+        <velocity name='shoulder_lift_v' class="UR5" joint='shoulder_lift_joint' />
+        <velocity name='forearm_v' class="UR5" joint='elbow_joint' />
+        <velocity name='wrist_1_v' class="UR5" joint='wrist_1_joint' />
+        <velocity name='wrist_2_v' class="UR5" joint='wrist_2_joint'/>
+        <velocity name='wrist_3_v' class="UR5" joint='wrist_3_joint'/>-->
+
+        <!--Gripper-->
+        <position name='grippercontrol' ctrllimited="true" kp="30" joint='left_driver_1' ctrlrange='0 0.65' />
+        <!-- <position name="close_r" joint="right_driver_1" ctrllimited="true" ctrlrange="-1 1" kp="3"/> -->
+        <!-- <position name="close_l" joint="left_driver_1" ctrllimited="true" ctrlrange="-1 1" kp="3"/> -->
+        <!-- <position name='finger_1' ctrllimited="true" kp="20" joint='right_driver_1' ctrlrange='0 1.2217'/>
+        <position name='finger_2' ctrllimited="true" kp="20" joint='left_driver_1' ctrlrange='0 1.2217'/> -->
+        <!-- <position name='finger_scissor' ctrllimited="true" kp="20" joint='gripperpalm_finger_1_joint' ctrlrange="-0.2967 0.2967"/> -->
+
+        <!-- <motor name='finger_1_T' ctrllimited="true" joint='gripperfinger_1_joint_1' ctrlrange='-0.1 .8' gear="20"/>
+        <motor name='finger_2_T' ctrllimited="true" joint='gripperfinger_2_joint_1' ctrlrange='-0.1 .8' gear="20"/>
+        <motor name='finger_scissor_T' ctrllimited="true" joint='gripperpalm_finger_1_joint' ctrlrange="-0.8 0.8" gear="15"/> -->
+    </actuator>
+    <sensor>
+        <touch name="touchsensor_r1" site="peg_touch_r1" />
+        <touch name="touchsensor_r2" site="peg_touch_r2" />
+        <touch name="touchsensor_r3" site="peg_touch_r3" />
+        <touch name="touchsensor_r4" site="peg_touch_r4" />
+        <touch name="touchsensor_r5" site="peg_touch_r5" />
+        <touch name="touchsensor_r6" site="peg_touch_r6" />
+        <touch name="touchsensor_l1" site="peg_touch_l1" />
+        <touch name="touchsensor_l2" site="peg_touch_l2" />
+        <touch name="touchsensor_l3" site="peg_touch_l3" />
+        <touch name="touchsensor_l4" site="peg_touch_l4" />
+        <touch name="touchsensor_l5" site="peg_touch_l5" />
+        <touch name="touchsensor_l6" site="peg_touch_l6" />
+        <force name="ee_force_sensor" site="ee_site"/>
+        <torque name="ee_torque_sensor" site="ee_site"/>
+    </sensor>
+</mujoco>

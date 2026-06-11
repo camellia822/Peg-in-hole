@@ -1,24 +1,31 @@
-import os
-
 from setuptools import find_packages, setup
 
 setup(
-    name="gym_envs",
-    author="Yi Liu",
-    author_email="yiyiliu.liu@ugent.be",
-    packages=find_packages(),
+    name="softbody-insertion",
+    packages=find_packages(include=["pih_rebuild", "pih_rebuild.*"]),
     include_package_data=True,
-    install_requires=["gym>=0.22, <=0.23", "gym-robotics", "numpy", "scipy"],
+    package_data={
+        "pih_rebuild": [
+            "assets/mujoco/*.xml",
+            "assets/mujoco/meshs/visual/*",
+            "assets/mujoco/textures/*",
+            "assets/urdf/*.urdf",
+        ],
+    },
+    install_requires=[
+        "gym>=0.22,<=0.23",
+        "mujoco==2.3.7",
+        "numpy<2",
+        "scipy",
+        "stable-baselines3==1.8.0",
+        "tensorboard",
+        "urdf-parser-py",
+    ],
     extras_require={
         "tests": ["pytest-cov"],
-        "codestyle": ["black", "isort", "pytype"],
-        "docs": ["sphinx", "sphinx-rtd-theme"],
-        "extra": ["numpngw", "stable-baselines3"],
+        "codestyle": ["black", "isort"],
     },
     classifiers=[
-        "License :: OSI Approved :: MIT License",
-        "Programming Language :: Python :: 3.7",
-        "Programming Language :: Python :: 3.8",
-        "Programming Language :: Python :: 3.9",
+        "Programming Language :: Python :: 3.10",
     ],
 )
