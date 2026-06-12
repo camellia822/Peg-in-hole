@@ -9,7 +9,7 @@ Current entry point:
 Main comparison:
 
 ```bash
-bash experiments/run_spar_ablation_065_seed7_200k.sh
+bash experiments/run_sac_baseline_065_seed7_200k.sh
 ```
 
 Single-factor perturbation sweeps:

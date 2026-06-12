@@ -12,7 +12,6 @@ from stable_baselines3.common.monitor import Monitor
 
 from pih_rebuild.config import DualPegTaskConfig
 from pih_rebuild.envs.ur5_dual_peg_env import UR5DualPegEnv
-from pih_rebuild.spar import SPARSAC
 
 
 INFO_KEYS = (
@@ -309,16 +308,6 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--ent_coef", type=str, default="auto_0.2")
     parser.add_argument("--eval_freq", type=int, default=25000)
     parser.add_argument("--eval_seeds", type=int, default=20)
-    parser.add_argument(
-        "--algo",
-        choices=("sac", "m1", "m1m2"),
-        default="sac",
-        help="sac=plain SB3 SAC; m1=SPAR-SAC with M1 only; m1m2=SPAR-SAC with M1+M2.",
-    )
-    parser.add_argument("--m1_warmup", type=int, default=20000, help="M1 phase-gate warmup steps.")
-    parser.add_argument("--m1_ramp", type=int, default=30000, help="M1 phase-gate ramp steps.")
-    parser.add_argument("--m2_warmup", type=int, default=20000, help="M2 dynamic-entropy warmup steps.")
-    parser.add_argument("--m2_ramp", type=int, default=30000, help="M2 dynamic-entropy ramp steps.")
     parser.add_argument("--obs_mode", choices=("vision", "vision-touch"), default="vision-touch")
     parser.add_argument("--max_steps", type=int, default=None)
     parser.add_argument(
@@ -435,21 +424,8 @@ def main() -> None:
         gradient_steps=1,
         ent_coef=args.ent_coef if args.ent_coef.startswith("auto") else float(args.ent_coef),
     )
-    if args.algo == "sac":
-        model = SAC("MlpPolicy", env, **common_kwargs)
-        tb_log_name = "SAC"
-    else:
-        model = SPARSAC(
-            "MlpPolicy",
-            env,
-            enable_m2=(args.algo == "m1m2"),
-            m1_warmup_steps=args.m1_warmup,
-            m1_ramp_steps=args.m1_ramp,
-            m2_warmup_steps=args.m2_warmup,
-            m2_ramp_steps=args.m2_ramp,
-            **common_kwargs,
-        )
-        tb_log_name = args.algo.upper()
+    model = SAC("MlpPolicy", env, **common_kwargs)
+    tb_log_name = "SAC"
     callback = RebuildDiagnosticsCallback(
         log_freq=args.log_freq,
         best_model_path=model_dir / "best_window_model",

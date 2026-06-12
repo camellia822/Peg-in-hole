@@ -6,10 +6,9 @@
 
 ```text
 pih_rebuild/
-	train_sac.py                 # SAC / SAC + M1 / SAC + M1 + M2 训练入口
+	train_sac.py                 # 纯 SAC 训练入口
 	config.py                    # 任务参数、奖励参数、扰动参数
 	envs/ur5_dual_peg_env.py     # MuJoCo + UR5 IK 双 peg 环境
-	spar/                        # M1/M2 算法实现
 	robotics/ur5_kdl.py          # UR5 PyKDL 正逆解
 	assets/                      # 新主线运行所需 XML、URDF、mesh、texture
 experiments/                   # 当前可用实验脚本
@@ -31,27 +30,7 @@ SAC baseline:
 
 ```bash
 /home/sun/anaconda3/envs/pih_env/bin/python -m pih_rebuild.train_sac \
-	--algo sac --tag sac_baseline \
-	--obs_mode vision-touch --max_steps 220 \
-	--perturb --perturb_intensity 0.65 \
-	--timesteps 200000 --seed 7
-```
-
-SAC + M1:
-
-```bash
-/home/sun/anaconda3/envs/pih_env/bin/python -m pih_rebuild.train_sac \
-	--algo m1 --tag spar_m1 \
-	--obs_mode vision-touch --max_steps 220 \
-	--perturb --perturb_intensity 0.65 \
-	--timesteps 200000 --seed 7
-```
-
-SAC + M1 + M2:
-
-```bash
-/home/sun/anaconda3/envs/pih_env/bin/python -m pih_rebuild.train_sac \
-	--algo m1m2 --tag spar_m1m2 \
+	--tag sac_baseline \
 	--obs_mode vision-touch --max_steps 220 \
 	--perturb --perturb_intensity 0.65 \
 	--timesteps 200000 --seed 7
@@ -60,5 +39,5 @@ SAC + M1 + M2:
 批量对比：
 
 ```bash
-bash experiments/run_spar_ablation_065_seed7_200k.sh
+bash experiments/run_sac_baseline_065_seed7_200k.sh
 ```

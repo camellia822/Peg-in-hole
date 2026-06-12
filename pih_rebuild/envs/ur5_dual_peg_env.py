@@ -100,7 +100,6 @@ class UR5DualPegEnv(gym.Env):
         self._last_vision_occluded = False
         self.step_count = 0
         self.episode_diag: dict = {}
-        self._prev_phase_idx = 0
 
     def reset(self, *, seed: Optional[int] = None, options: Optional[dict] = None):
         if seed is not None:
@@ -129,7 +128,6 @@ class UR5DualPegEnv(gym.Env):
         self.prev_worst_dist = self._point_metrics()[2]
         self.prev_worst_xy_err = reset_metrics["worst_xy_err"]
         self.prev_min_entry_depth = reset_metrics["min_entry_depth"]
-        self._prev_phase_idx = 0
         self._reset_episode_diagnostics()
         return self._get_obs().astype(np.float32)
 
@@ -260,7 +258,6 @@ class UR5DualPegEnv(gym.Env):
         info["vision_occluded"] = float(self._last_vision_occluded)
         info["vision_bias_norm"] = float(np.linalg.norm(self.vision_pos_bias))
         info["force_bias_norm"] = float(np.linalg.norm(self.force_bias_drift[:3]))
-        info.update(self._spar_labels(reward_info))
         if done:
             info.update(self._episode_summary(done_reason, reward_info))
         self.prev_worst_xy_err = reward_info["worst_xy_err"]
@@ -513,57 +510,6 @@ class UR5DualPegEnv(gym.Env):
         }
         summary.update({key: float(diag["reward_sums"][key]) for key in self.EPISODE_REWARD_KEYS})
         return summary
-
-    def _spar_labels(self, reward_info: dict) -> dict:
-        """Environment-side auxiliary phase signals for the SPAR M1/M2 modules.
-
-        Only written into the ``info`` dict; observation, reward, action and
-        physics are left untouched, so a plain-SAC run on this env is identical
-        to the version without these labels. The four phases are
-        ``search / align / insert / recovery`` where ``recovery`` is redefined
-        for this task as "aligned but insertion has stalled" (the dominant
-        depth_gap failure), so every phase carries real samples.
-        """
-        cfg = self.config
-        e_xy = float(reward_info["worst_xy_err"])
-        dsf = float(reward_info["worst_depth_shortfall"])
-        ddelta = float(reward_info["depth_delta"])
-        sync_err = float(reward_info["depth_sync_err"])
-        xy_progress = float(reward_info["xy_progress"])
-
-        coarse = self._sigmoid((e_xy - cfg.prealign_down_xy_gate) / 0.002)
-        aligned = self._sigmoid((cfg.align_xy_gate - e_xy) / max(cfg.align_xy_tau, 1e-9))
-        not_inserted = self._sigmoid((dsf - cfg.success_depth_tolerance) / 0.0008)
-        stalled = self._sigmoid(
-            (cfg.stuck_depth_delta_threshold - ddelta) / max(cfg.stuck_depth_delta_threshold, 1e-9)
-        )
-        stalled = stalled * not_inserted
-
-        search = coarse
-        align = (1.0 - coarse) * (1.0 - aligned)
-        insert = aligned * (1.0 - stalled)
-        recovery = aligned * stalled
-        raw = np.array([search, align, insert, recovery], dtype=np.float64)
-        total = float(raw.sum())
-        if total < 1e-8:
-            probs = np.full(4, 0.25, dtype=np.float64)
-        else:
-            probs = raw / total
-
-        phase_idx = int(np.argmax(probs))
-        switch = 1.0 if phase_idx != self._prev_phase_idx else 0.0
-        self._prev_phase_idx = phase_idx
-
-        return {
-            "spar_phase_target": probs.astype(np.float32),
-            "spar_switch_target": float(switch),
-            "spar_stall_score": float(aligned * stalled),
-            "spar_sync_score": float(np.tanh(sync_err / max(cfg.depth_sync_ref, 1e-9))),
-            "spar_align_progress": float(np.clip(xy_progress, 0.0, 1.0)),
-            "spar_insert_progress": float(np.clip(ddelta / max(cfg.depth_delta_ref, 1e-9), 0.0, 1.0)),
-            "spar_valid": 1.0,
-            "spar_phase_idx": float(phase_idx),
-        }
 
     def _peg_positions(self) -> tuple[np.ndarray, np.ndarray]:
         left = self.data.site_xpos[self.peg_site_ids[0]].copy()
