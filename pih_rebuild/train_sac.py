@@ -12,6 +12,9 @@ from stable_baselines3.common.monitor import Monitor
 
 from pih_rebuild.config import DualPegTaskConfig
 from pih_rebuild.envs.ur5_dual_peg_env import UR5DualPegEnv
+from pih_rebuild.spar.algorithm import SPARSAC
+from pih_rebuild.spar.buffers import SPARReplayBuffer
+from pih_rebuild.spar.policies import SPARPolicy
 
 
 INFO_KEYS = (
@@ -106,7 +109,7 @@ def _is_scalar_number(value) -> bool:
 class RebuildDiagnosticsCallback(BaseCallback):
     def __init__(
         self,
-        window_size: int = 20,
+        window_size: int = 30,
         log_freq: int = 1000,
         best_model_path: Path | None = None,
         eval_freq: int = 0,
@@ -232,6 +235,7 @@ class RebuildDiagnosticsCallback(BaseCallback):
         self.logger.record("eval_deterministic/depth_gap_rate", depth_gap_rate)
         self.logger.record("eval_deterministic/stuck_near_xy_rate", stuck_rate)
         self.logger.record("eval_deterministic/out_of_workspace_rate", out_of_workspace_rate)
+        self.logger.dump(self.num_timesteps)
 
         better_success = success_rate > self.best_eval_success_rate
         same_success_faster = success_rate == self.best_eval_success_rate and mean_done_step < self.best_eval_mean_done_step
@@ -251,6 +255,20 @@ def build_config(args: argparse.Namespace) -> DualPegTaskConfig:
     updates = {}
     if args.max_steps is not None:
         updates["max_steps"] = int(args.max_steps)
+    if args.init_xy_random_mm is not None:
+        init_xy_random = abs(float(args.init_xy_random_mm)) / 1000.0
+        updates["init_xy_random"] = (-init_xy_random, init_xy_random)
+    if args.init_height_mm is not None:
+        updates["init_height_above_surface"] = abs(float(args.init_height_mm)) / 1000.0
+    if args.workspace_xy_mm is not None:
+        updates["workspace_xy_limit"] = abs(float(args.workspace_xy_mm)) / 1000.0
+    if args.workspace_z_top_mm is not None:
+        updates["workspace_z_top"] = abs(float(args.workspace_z_top_mm)) / 1000.0
+    if args.oow_xy_mm is not None:
+        updates["out_of_workspace_radius"] = abs(float(args.oow_xy_mm)) / 1000.0
+    if args.goal_xy_random_mm is not None:
+        goal_xy_random = abs(float(args.goal_xy_random_mm)) / 1000.0
+        updates["goal_xy_random"] = (-goal_xy_random, goal_xy_random)
     if args.insertion_depth_mm is not None:
         insertion_depth = float(args.insertion_depth_mm) / 1000.0
         updates["insertion_depth"] = insertion_depth
@@ -302,14 +320,80 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--seed", type=int, default=42)
     parser.add_argument("--tag", type=str, default="rebuild_sac_v0")
     parser.add_argument("--log_freq", type=int, default=1000)
+    parser.add_argument(
+        "--success_window",
+        type=int,
+        default=30,
+        help="Episode window for rebuild/success_rate_window and best_window_model selection.",
+    )
+    parser.add_argument(
+        "--stats_window_size",
+        type=int,
+        default=100,
+        help="SB3 rollout statistics window size for rollout/success_rate and ep_rew_mean.",
+    )
+    parser.add_argument(
+        "--tb_log_interval",
+        type=int,
+        default=4,
+        help="SB3 TensorBoard dump interval in episodes. Use 1 for denser curves.",
+    )
     parser.add_argument("--learning_starts", type=int, default=1000)
     parser.add_argument("--batch_size", type=int, default=256)
     parser.add_argument("--learning_rate", type=float, default=3e-4)
     parser.add_argument("--ent_coef", type=str, default="auto_0.2")
+    parser.add_argument(
+        "--algo",
+        choices=("sac", "m1", "m1m2", "m1m2m3"),
+        default="sac",
+        help="Which SPAR-SAC ablation to train: sac | m1 | m1m2 | m1m2m3.",
+    )
+    parser.add_argument("--m1_warmup", type=int, default=20000, help="Steps before the M1 phase gate starts ramping.")
+    parser.add_argument("--m1_ramp", type=int, default=30000, help="Ramp length (steps) for the M1 phase gate 0->1.")
+    parser.add_argument("--m2_warmup", type=int, default=20000, help="Steps before the M2 dynamic-entropy blend starts.")
+    parser.add_argument("--m2_ramp", type=int, default=30000, help="Ramp length (steps) for the M2 blend 0->1.")
+    parser.add_argument("--phase_enc_dim", type=int, default=16, help="Width of the phase-conditioning encoder.")
+    parser.add_argument("--phase_hidden", type=int, default=64, help="Hidden width of the PhaseNet trunk.")
     parser.add_argument("--eval_freq", type=int, default=25000)
     parser.add_argument("--eval_seeds", type=int, default=20)
     parser.add_argument("--obs_mode", choices=("vision", "vision-touch"), default="vision-touch")
     parser.add_argument("--max_steps", type=int, default=None)
+    parser.add_argument(
+        "--init_xy_random_mm",
+        type=float,
+        default=None,
+        help="Override symmetric initial XY randomization range in millimeters (e.g. 80 -> [-80mm, 80mm]).",
+    )
+    parser.add_argument(
+        "--init_height_mm",
+        type=float,
+        default=None,
+        help="Override initial EE height above the hole surface in millimeters (default 80mm).",
+    )
+    parser.add_argument(
+        "--workspace_xy_mm",
+        type=float,
+        default=None,
+        help="Override EE-target XY workspace half-extent in millimeters (default 80mm). Enlarge so init_xy_random stays effective.",
+    )
+    parser.add_argument(
+        "--workspace_z_top_mm",
+        type=float,
+        default=None,
+        help="Override EE-target max height above the hole surface in millimeters (default 140mm). Enlarge so init_height stays effective.",
+    )
+    parser.add_argument(
+        "--oow_xy_mm",
+        type=float,
+        default=None,
+        help="Override out-of-workspace XY radius in millimeters (default 120mm). Enlarge together with the workspace bounds.",
+    )
+    parser.add_argument(
+        "--goal_xy_random_mm",
+        type=float,
+        default=None,
+        help="Override symmetric hole XY randomization range in millimeters (e.g. 2 -> [-2mm, 2mm]).",
+    )
     parser.add_argument(
         "--insertion_depth_mm",
         type=float,
@@ -423,10 +507,37 @@ def main() -> None:
         train_freq=1,
         gradient_steps=1,
         ent_coef=args.ent_coef if args.ent_coef.startswith("auto") else float(args.ent_coef),
+        stats_window_size=args.stats_window_size,
     )
-    model = SAC("MlpPolicy", env, **common_kwargs)
-    tb_log_name = "SAC"
+    algo = args.algo.lower()
+    if algo == "sac":
+        model = SAC("MlpPolicy", env, **common_kwargs)
+        tb_log_name = "SAC"
+    else:
+        enable_m2 = algo in ("m1m2", "m1m2m3")
+        enable_m3 = algo == "m1m2m3"
+        policy_kwargs = dict(
+            phase_enc_dim=args.phase_enc_dim,
+            phase_hidden=args.phase_hidden,
+            n_phases=4,
+        )
+        model = SPARSAC(
+            SPARPolicy,
+            env,
+            enable_m1=True,
+            enable_m2=enable_m2,
+            enable_m3=enable_m3,
+            m1_warmup=args.m1_warmup,
+            m1_ramp=args.m1_ramp,
+            m2_warmup=args.m2_warmup,
+            m2_ramp=args.m2_ramp,
+            policy_kwargs=policy_kwargs,
+            replay_buffer_class=SPARReplayBuffer,
+            **common_kwargs,
+        )
+        tb_log_name = algo.upper()
     callback = RebuildDiagnosticsCallback(
+        window_size=args.success_window,
         log_freq=args.log_freq,
         best_model_path=model_dir / "best_window_model",
         eval_freq=args.eval_freq,
@@ -434,7 +545,12 @@ def main() -> None:
         best_eval_model_path=model_dir / "best_eval_model",
         env_config=env_config,
     )
-    model.learn(total_timesteps=args.timesteps, callback=callback, tb_log_name=tb_log_name)
+    model.learn(
+        total_timesteps=args.timesteps,
+        callback=callback,
+        tb_log_name=tb_log_name,
+        log_interval=args.tb_log_interval,
+    )
     model.save(model_dir / "final_model")
     env.close()
 

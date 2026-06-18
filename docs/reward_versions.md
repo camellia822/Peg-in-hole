@@ -75,3 +75,41 @@ adds a safer force/tactile path for `--obs_mode vision-touch`:
 The intended naming is:
 
 - `v3-vision-touch`: force-aware medium shaping with 27D observation.
+
+## v4: Lean Dense (current default)
+
+Current code file: `pih_rebuild/config.py` and
+`pih_rebuild/envs/ur5_dual_peg_env.py`. This is now the reward in code; it
+replaces v3 in place (no flag).
+
+Motivation: v1/v2/v3 stacked many prescriptive shaping terms (press-down /
+no-press-down action rewards, anti-stuck, xy-hold, depth-sync, terminal-depth,
+xy-ready bonus). Those competing terms made the success curve rise slowly and
+oscillate. v4 rewards task OUTCOMES and lets SAC discover the strategy:
+
+- XY alignment: `align_progress_weight * clip(progress)` (clipped potential
+  progress, signal at every scale, zero for hovering) + a small
+  `align_closeness_weight * (1 - tanh(worst_xy_err / align_xy_ref))` gradient.
+- Depth insertion: gated by `insert_weight` (only counts once aligned),
+  `depth_progress_weight * clip(depth_delta)` + `depth_closeness_weight *
+  depth_closeness`. Reward comes from depth actually increasing / being deep,
+  never from a prescribed "press down" action.
+- Sparse `success_bonus` (35) = the dominant incentive.
+- Minimal regularizers only: contact-weighted force safety, `||a||^2` action
+  smoothness, and a small time penalty.
+
+Removed vs v3: `r_prealign_press`, `r_aligned_z_action`, `r_depth_delta` (old
+form), `r_stuck`, `r_insert_xy_hold`, `r_depth_sync`, `r_terminal_depth`,
+`r_depth_level`, and the `xy_ready` bonus / `xy_stage_weight` micro-tuning. The
+info/CSV schema is unchanged: removed components log as `0.0` so old monitor
+CSVs and plots stay comparable.
+
+Action scales are unchanged (`_action_scales`). The clean baseline runs with no
+perception perturbation (`experiments/run_sac_baseline_clean_seed7_200k.sh`):
+no vision bias / noise / occlusion / force drift.
+
+The intended naming is:
+
+- `v4-vision-touch`: lean dense reward with 27D observation.
+- `v4-vision`: same formula with force terms / force obs disabled
+  (`--obs_mode vision`).

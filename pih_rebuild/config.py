@@ -15,6 +15,14 @@ class DualPegTaskConfig:
     goal_xy_random: tuple[float, float] = (0.0, 0.0)
     init_xy_random: tuple[float, float] = (-0.050, 0.050)
     init_height_above_surface: float = 0.080
+    # EE-target workspace bounds (relative to goal center). The running ee_target
+    # is clipped to these every step, so they cap how far init_xy_random /
+    # init_height can effectively push the start. Defaults match the original
+    # hard-coded limits, so existing experiments are unchanged.
+    workspace_xy_limit: float = 0.08
+    workspace_z_top: float = 0.14
+    workspace_z_bottom: float = -0.02
+    out_of_workspace_radius: float = 0.12
     peg_radius: float = 0.0200
     radial_clearance: float = 0.0010
     insertion_depth: float = 0.020
@@ -31,7 +39,7 @@ class DualPegTaskConfig:
     z_action_scale_prealign: float = 0.00025
     depth_action_near_gate: float = 0.003
     depth_action_tau: float = 0.0008
-    max_steps: int = 220
+    max_steps: int = 200
     control_substeps: int = 20
     obs_error_ref: float = 0.03
     obs_dist_ref: float = 0.03
@@ -51,6 +59,17 @@ class DualPegTaskConfig:
     xy_progress_ref: float = 0.0006
     xy_progress_weight: float = 0.35
     xy_ready_bonus_weight: float = 0.05
+    # --- Lean dense reward (v4) weights ---
+    # The reward rewards task OUTCOMES (alignment progress, depth achieved,
+    # success) rather than prescribed actions. XY/depth each combine a clipped
+    # potential-progress term (signal at every scale, zero for hovering) with a
+    # small closeness term (smooth gradient near the goal). Depth is gated by
+    # insert_weight so it only matters once aligned. No press-down/hold/anti-stuck
+    # teaching terms, letting SAC discover the insertion strategy itself.
+    align_progress_weight: float = 0.50
+    align_closeness_weight: float = 0.15
+    depth_progress_weight: float = 0.40
+    depth_closeness_weight: float = 0.60
     depth_ref: float = 0.020
     depth_sync_ref: float = 0.0007
     depth_distance_weight: float = 0.40

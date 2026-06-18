@@ -9,6 +9,7 @@ from gym import spaces
 
 from pih_rebuild.config import DualPegTaskConfig
 from pih_rebuild.robotics.ur5_kdl import URx_kdl
+from pih_rebuild.spar.labels import SparLabeler
 
 
 class UR5DualPegEnv(gym.Env):
@@ -100,6 +101,7 @@ class UR5DualPegEnv(gym.Env):
         self._last_vision_occluded = False
         self.step_count = 0
         self.episode_diag: dict = {}
+        self._spar_labeler = SparLabeler(self.config)
 
     def reset(self, *, seed: Optional[int] = None, options: Optional[dict] = None):
         if seed is not None:
@@ -129,6 +131,7 @@ class UR5DualPegEnv(gym.Env):
         self.prev_worst_xy_err = reset_metrics["worst_xy_err"]
         self.prev_min_entry_depth = reset_metrics["min_entry_depth"]
         self._reset_episode_diagnostics()
+        self._spar_labeler.reset()
         return self._get_obs().astype(np.float32)
 
     def _reset_perturbation_state(self) -> None:
@@ -238,7 +241,8 @@ class UR5DualPegEnv(gym.Env):
         self._update_episode_diagnostics(action, reward_info)
         out_of_workspace = self._out_of_workspace()
         terminated = bool(success)
-        truncated = self.step_count >= self.config.max_steps or out_of_workspace
+        timeout = self.step_count >= self.config.max_steps
+        truncated = timeout or out_of_workspace
         done = terminated or truncated
         done_reason = self._done_reason(success, out_of_workspace, reward_info) if done else ""
         self.prev_worst_dist = worst_dist
@@ -258,6 +262,12 @@ class UR5DualPegEnv(gym.Env):
         info["vision_occluded"] = float(self._last_vision_occluded)
         info["vision_bias_norm"] = float(np.linalg.norm(self.vision_pos_bias))
         info["force_bias_norm"] = float(np.linalg.norm(self.force_bias_drift[:3]))
+        info.update(self._spar_labeler.compute(reward_info, bool(success)))
+        # Tell SB3 to bootstrap the value at a pure max-steps timeout (truncation),
+        # instead of treating it as a real terminal state. out_of_workspace stays a
+        # hard terminal failure (no bootstrap). Reduces value bias / curve wobble.
+        if timeout and not terminated and not out_of_workspace:
+            info["TimeLimit.truncated"] = True
         if done:
             info.update(self._episode_summary(done_reason, reward_info))
         self.prev_worst_xy_err = reward_info["worst_xy_err"]
@@ -554,68 +564,33 @@ class UR5DualPegEnv(gym.Env):
         target_depth = max(self.config.insertion_depth, 1e-9)
         worst_depth_shortfall = metrics["worst_depth_shortfall"]
         depth_sync_err = metrics["depth_sync_err"]
+        depth_closeness = metrics["depth_closeness"]
+        xy_excess = metrics["xy_excess"]
 
+        # ---- Lean dense reward (v4): reward task OUTCOMES, not prescribed actions ----
+        # 1) XY alignment: clipped potential progress (gives signal at every scale
+        #    and is zero for hovering, so there is no plateau to dwell on) plus a
+        #    small closeness gradient for fine alignment near the hole.
         xy_delta = self.prev_worst_xy_err - worst_xy_err
         xy_progress = float(np.clip(xy_delta / self.config.xy_progress_ref, -1.0, 1.0))
-        prev_insert_weight = self._sigmoid(
-            (self.config.align_xy_gate - self.prev_worst_xy_err) / self.config.align_xy_tau
-        )
-        xy_ready_delta = insert_weight - prev_insert_weight
-        xy_ready_progress = float(np.clip(xy_ready_delta / 0.25, -1.0, 1.0))
-        entry_progress = float(np.clip(min_entry_depth / target_depth, 0.0, 1.0))
-        depth_closeness = metrics["depth_closeness"]
-        depth_score = 2.0 * depth_closeness - 1.0
-        terminal_depth_progress = 1.0 - np.clip(
-            worst_depth_shortfall / self.config.terminal_depth_window,
-            0.0,
-            1.0,
-        )
+        xy_closeness = 1.0 - float(np.tanh(worst_xy_err / self.config.align_xy_ref))
+        r_align_progress = self.config.align_progress_weight * xy_progress
+        r_align_closeness = self.config.align_closeness_weight * xy_closeness
+        r_align = r_align_progress + r_align_closeness
 
-        r_xy_progress = (
-            self.config.xy_progress_weight * xy_progress
-            + self.config.xy_ready_bonus_weight * xy_ready_progress
-        )
-        xy_stage_weight = 1.05 - 0.25 * insert_weight
-        r_xy_distance = -xy_stage_weight * (
-            0.80 * np.tanh(worst_xy_err / self.config.align_xy_ref)
-            + 0.20 * np.tanh(sync_xy_err / self.config.align_sync_ref)
-        )
+        # 2) Depth insertion: gated by insert_weight so it only matters once
+        #    aligned. The reward comes from depth actually increasing (progress) and
+        #    from being deep (closeness) -- never from a prescribed "press down"
+        #    action -- so the policy is free to discover how to drive it in.
+        depth_progress = float(np.clip(depth_delta / self.config.depth_delta_ref, -1.0, 1.0))
+        r_depth_progress = insert_weight * self.config.depth_progress_weight * depth_progress
+        r_depth_closeness = insert_weight * self.config.depth_closeness_weight * depth_closeness
+        r_depth = r_depth_progress + r_depth_closeness
 
-        r_depth_distance = insert_weight * self.config.depth_distance_weight * depth_score
-        r_depth_level = insert_weight * self.config.depth_level_weight * entry_progress
-        r_depth_sync = -0.12 * insert_weight * np.tanh(depth_sync_err / self.config.depth_sync_ref)
-        r_insert = r_depth_distance + r_depth_level + r_depth_sync
-        r_terminal_depth = insert_weight * self.config.terminal_depth_weight * terminal_depth_progress
-        xy_excess = metrics["xy_excess"]
-        xy_hold_phase = max(insert_weight, inserted_weight)
-        r_insert_xy_hold = -self.config.insert_xy_hold_weight * xy_hold_phase * np.tanh(
-            xy_excess / self.config.insert_xy_hold_ref
-        )
+        # 3) Sparse success bonus = the real objective and the dominant incentive.
+        r_success = self.config.success_bonus if success else 0.0
 
-        prealign_press = max(-float(action[2]), 0.0)
-        xy_far_down_weight = self._sigmoid(
-            (worst_xy_err - self.config.prealign_down_xy_gate) / self.config.prealign_down_xy_tau
-        )
-        r_prealign_press = -self.config.prealign_press_weight * xy_far_down_weight * prealign_press
-        aligned_down_action = max(-float(action[2]), 0.0)
-        aligned_up_action = max(float(action[2]), 0.0)
-        depth_need = float(np.clip(worst_depth_shortfall / target_depth, 0.0, 1.0))
-        r_aligned_z_action = insert_weight * (
-            self.config.aligned_down_action_weight * aligned_down_action * depth_need
-            - self.config.aligned_up_action_weight * aligned_up_action
-        )
-        r_depth_delta = insert_weight * self.config.depth_delta_reward_weight * np.clip(
-            depth_delta / self.config.depth_delta_ref,
-            -1.0,
-            1.0,
-        )
-        stuck = (
-            insert_weight > 0.65
-            and worst_depth_shortfall > self.config.success_depth_tolerance
-            and abs(depth_delta) <= self.config.stuck_depth_delta_threshold
-        )
-        r_stuck = -self.config.stuck_penalty_weight if stuck else 0.0
-
+        # 4) Minimal regularizers: force safety, action smoothness, time efficiency.
         force_torque = self.current_force_torque()
         force_norm = float(np.linalg.norm(force_torque[:3]))
         torque_norm = float(np.linalg.norm(force_torque[3:]))
@@ -627,50 +602,41 @@ class UR5DualPegEnv(gym.Env):
         torque_excess = max(torque_norm - self.config.torque_safe, 0.0) / self.config.torque_penalty_ref
         r_force = -force_weight * min(force_excess * force_excess, 5.0)
         r_force -= 0.5 * force_weight * min(torque_excess * torque_excess, 5.0)
-
         r_action = -self.config.action_penalty_weight * float(np.dot(action, action))
         r_time = -self.config.time_penalty
-        r_success = self.config.success_bonus if success else 0.0
-        r_depth = r_insert + r_terminal_depth + r_prealign_press + r_aligned_z_action + r_depth_delta
-        reward = (
-            r_xy_progress
-            + r_xy_distance
-            + r_insert
-            + r_terminal_depth
-            + r_insert_xy_hold
-            + r_prealign_press
-            + r_aligned_z_action
-            + r_depth_delta
-            + r_stuck
-            + r_force
-            + r_action
-            + r_time
-            + r_success
+
+        reward = r_align + r_depth + r_success + r_force + r_action + r_time
+
+        # State-only diagnostics (not part of the reward, kept for logging/plots).
+        entry_progress = float(np.clip(min_entry_depth / target_depth, 0.0, 1.0))
+        depth_score = 2.0 * depth_closeness - 1.0
+        terminal_depth_progress = 1.0 - float(
+            np.clip(worst_depth_shortfall / self.config.terminal_depth_window, 0.0, 1.0)
         )
 
         info = {
-            "reward_align": float(r_xy_progress + r_xy_distance),
-            "reward_xy_progress": float(r_xy_progress),
-            "reward_xy_distance": float(r_xy_distance),
-            "reward_insert": float(r_insert),
-            "reward_depth_distance": float(r_depth_distance),
-            "reward_depth_level": float(r_depth_level),
-            "reward_depth_sync": float(r_depth_sync),
-            "reward_terminal_depth": float(r_terminal_depth),
-            "reward_insert_xy_hold": float(r_insert_xy_hold),
+            "reward_align": float(r_align),
+            "reward_xy_progress": float(r_align_progress),
+            "reward_xy_distance": float(r_align_closeness),
+            "reward_insert": float(r_depth),
+            "reward_depth_distance": float(r_depth_closeness),
+            "reward_depth_level": 0.0,
+            "reward_depth_sync": 0.0,
+            "reward_terminal_depth": 0.0,
+            "reward_insert_xy_hold": 0.0,
             "reward_force": float(r_force),
-            "reward_prealign_press": float(r_prealign_press),
-            "reward_aligned_z_action": float(r_aligned_z_action),
-            "reward_depth_delta": float(r_depth_delta),
+            "reward_prealign_press": 0.0,
+            "reward_aligned_z_action": 0.0,
+            "reward_depth_delta": float(r_depth_progress),
             "reward_action": float(r_action),
             "reward_time": float(r_time),
             "reward_success": float(r_success),
-            "step_r_xy_progress": float(r_xy_progress),
-            "step_r_xy_distance": float(r_xy_distance + r_insert_xy_hold),
+            "step_r_xy_progress": float(r_align_progress),
+            "step_r_xy_distance": float(r_align_closeness),
             "step_r_depth": float(r_depth),
             "step_r_success": float(r_success),
             "step_r_time": float(r_time),
-            "step_r_stuck": float(r_stuck),
+            "step_r_stuck": 0.0,
             "step_r_action": float(r_action),
             "step_r_force": float(r_force),
             "insert_weight": float(insert_weight),
@@ -680,8 +646,8 @@ class UR5DualPegEnv(gym.Env):
             "sync_xy_err": float(sync_xy_err),
             "worst_xy_err": worst_xy_err,
             "xy_excess": float(xy_excess),
-            "xy_ready_delta": float(xy_ready_delta),
-            "xy_ready_progress": float(xy_ready_progress),
+            "xy_ready_delta": 0.0,
+            "xy_ready_progress": 0.0,
             "left_entry_depth": left_entry_depth,
             "right_entry_depth": right_entry_depth,
             "min_entry_depth": min_entry_depth,
@@ -694,7 +660,7 @@ class UR5DualPegEnv(gym.Env):
             "terminal_depth_progress": float(terminal_depth_progress),
             "entry_progress": float(entry_progress),
             "xy_progress": float(xy_progress),
-            "xy_far_down_weight": float(xy_far_down_weight),
+            "xy_far_down_weight": 0.0,
             "depth_sync_err": float(depth_sync_err),
             "force_norm": force_norm,
             "torque_norm": torque_norm,
@@ -724,8 +690,13 @@ class UR5DualPegEnv(gym.Env):
         return target
 
     def _clip_ee_target(self, target: np.ndarray) -> np.ndarray:
-        low = self.goal_surface_center + np.array([-0.08, -0.08, -0.02], dtype=np.float64)
-        high = self.goal_surface_center + np.array([0.08, 0.08, 0.14], dtype=np.float64)
+        xy = self.config.workspace_xy_limit
+        low = self.goal_surface_center + np.array(
+            [-xy, -xy, self.config.workspace_z_bottom], dtype=np.float64
+        )
+        high = self.goal_surface_center + np.array(
+            [xy, xy, self.config.workspace_z_top], dtype=np.float64
+        )
         return np.clip(target, low, high)
 
     def _ik(self, current_joint: np.ndarray, target_position: np.ndarray, limit_delta: bool = True) -> np.ndarray:
@@ -752,7 +723,10 @@ class UR5DualPegEnv(gym.Env):
 
     def _out_of_workspace(self) -> bool:
         peg_center = 0.5 * (self._peg_positions()[0] + self._peg_positions()[1])
-        return bool(np.linalg.norm(peg_center[:2] - self.goal_surface_center[:2]) > 0.12)
+        return bool(
+            np.linalg.norm(peg_center[:2] - self.goal_surface_center[:2])
+            > self.config.out_of_workspace_radius
+        )
 
     def _body_id(self, name: str) -> int:
         idx = mujoco.mj_name2id(self.model, mujoco.mjtObj.mjOBJ_BODY, name)
